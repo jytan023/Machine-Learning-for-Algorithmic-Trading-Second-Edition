@@ -1,3 +1,4 @@
 # ignore data filesITCH_Order_Book
 02_market_and_fundamental_data/01_NASDAQ_TotalView-ITCH_Order_Book/data/
-data/**
+
+data/
