@@ -1,3 +1,4 @@
 # ignore data filesITCH_Order_Book
 data/
 .env
+# *.h5
