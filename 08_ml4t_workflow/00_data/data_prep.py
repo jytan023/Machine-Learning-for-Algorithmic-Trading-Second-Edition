@@ -10,10 +10,10 @@ from scipy.stats import spearmanr
 pd.set_option('display.expand_frame_repr', False)
 np.random.seed(42)
 
-PROJECT_DIR = Path('..', '..')
+PROJECT_DIR = Path('..', '..') / 'Git'/'Machine-Learning-for-Algorithmic-Trading-Second-Edition'
 
-DATA_DIR = PROJECT_DIR / 'data'
-
+DATA_DIR = PROJECT_DIR /'data'
+# print(DATA_DIR)
 
 def get_backtest_data(predictions='lasso/predictions'):
     """Combine chapter 7 lr/lasso/ridge regression predictions
