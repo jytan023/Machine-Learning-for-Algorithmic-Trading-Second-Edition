@@ -189,7 +189,7 @@ for i in range(len(monthly_ret)-x):
       # except:
       #   print('Stop loss not triggered')
     combined = (cum_df*optimal_weights).transpose().sum()
-  if  rolling_ret.iloc[i+1].name + pd.offsets.MonthBegin(-1) >= pd.to_datetime('today').strftime('%Y-%m-%d') pd.offsets.MonthBegin(-3):
+  if  rolling_ret.iloc[i+1].name + pd.offsets.MonthBegin(-1) >= pd.to_datetime('today') + pd.offsets.MonthBegin(-3):
     print("following month's return", rolling_ret.iloc[i+1].name + pd.offsets.MonthBegin(-1))
     print(top_n, optimal_weights, industry.set_index('tickers').loc[top_n.index,:])
 
