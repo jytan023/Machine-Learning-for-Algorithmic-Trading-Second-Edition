@@ -6,6 +6,7 @@ import pandas as pd
 from scipy.optimize import minimize
 import statsmodels
 import statsmodels.api as sm
+import os
 from statsmodels.tsa.stattools import coint, adfuller
 
 import matplotlib.pyplot as plt
@@ -34,14 +35,42 @@ results_path = Path('results', 'decision_trees')
 if not results_path.exists():
     results_path.mkdir(parents=True)
 
+import wikipedia as wp
+import io
+
+def get_table(title, filename, match, use_cache=False):
+
+    if use_cache and os.path.isfile(filename):
+        pass
+    else:
+        html = wp.page(title).html()
+        df = pd.read_html(io.StringIO(html), header=0, match=match)[0]
+
+        df.to_csv(filename, header=True, index=False, encoding='utf-8')
+
+    df = pd.read_csv(filename)
+    return df
+
+title = 'List of S&P 500 companies'
+filename = 'sp500.csv'
+df = get_table(title, filename, match='Symbol')
+
+# dd/mm/YY H:M:S
+now = datetime.datetime.now()
+dt_string = now.strftime("%m/%d/%Y %H:%M:%S")
+print('{} (retrieved {})'.format(title, dt_string))
+
+# df = ticker_list[0]
+tickers = df['Symbol'].to_list()
+
 start = '2010-01-01'
 end = pd.to_datetime('today').strftime('%Y-%m-%d')
 
 from yahooquery import Ticker
 
-ticker_list = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
-df = ticker_list[0]
-tickers = df['Symbol'].to_list()
+# ticker_list = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
+# df = ticker_list[0]
+# tickers = df['Symbol'].to_list()
 
 tickers_list = Ticker(tickers, asynchronous=False)
 
@@ -196,7 +225,7 @@ for i in range(len(monthly_ret)-x):
     # Obtain average daily return of portfolio by dividing the average of r_t+1/r_t
     ret = pd.concat([ret,combined.div(combined.shift(1)).fillna(combined.iloc[0])], axis=0)
     # print(top_n, optimal_weights, industry.set_index('tickers').loc[top_n.index,:])
-ret.index = (ret.index-pd.DateOffset(days=d)).tz_convert('utc')
+ret.index = (ret.index-pd.DateOffset(days=d)).tz_localize('UTC')
 
 
 ### Next Month's 3 Company
