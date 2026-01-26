@@ -62,7 +62,7 @@ from yahooquery import Ticker
 # df = ticker_list[0]
 # tickers = df['Symbol'].to_list()
 
-tickers_list = Ticker(tickers, asynchronous=False)
+tickers_list = Ticker(tickers, asynchronous=True)
 
 daily = tickers_list.history(interval='1d', start=start, end=end)
 
@@ -237,7 +237,8 @@ for i in range(len(monthly_ret) - x):
                     trigger_idx = cum_df.index.get_loc(trigger_date)
                     cum_df[j].iloc[trigger_idx:] = l
             except (IndexError, KeyError):
-                print('Limit sell not triggered')
+                pass
+                # print('Limit sell not triggered')
         
         # Multiply each column by its weight, then sum across columns
         # Align weights with columns using Series for proper broadcasting
