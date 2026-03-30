@@ -286,8 +286,28 @@ for i in range(len(monthly_ret) - x):
     
     # Only process recent months (last 3 months)
     if next_month >= pd.to_datetime('today') + pd.offsets.MonthBegin(-3):
-        print("following month's return", next_month)
-        print(top_n, optimal_weights, industry_indexed.loc[top_n.index, :])
+        # Get the 3-month lookback period dates
+        lookback_start = rolling_ret.iloc[i].name - pd.DateOffset(months=x-1)
+        lookback_end = rolling_ret.iloc[i].name
+        
+        print(f"\n=== Month: {next_month.strftime('%Y-%m')} ===")
+        print(f"Lookback period: {lookback_start.strftime('%Y-%m')} to {lookback_end.strftime('%Y-%m')}")
+        print(f"Selected stocks (past 3-month return, sector):")
+        
+        for ticker in top_n.index:
+            past_return = rolling_ret_row[ticker]
+            sector = industry_indexed.loc[ticker, 'sector'] if ticker in industry_indexed.index else 'N/A'
+            print(f"  {ticker}: {past_return*100:.2f}% ({sector})")
+        
+        # Get current month cumulative returns
+        if len(top_n) == n:
+            print(f"Current month cumulative return:")
+            for ticker in top_n.index:
+                final_return = cum_df[ticker].iloc[-1] - 1
+                print(f"  {ticker}: {final_return*100:.2f}%")
+            portfolio_return = (combined.iloc[-1] / combined.iloc[0] - 1) if len(combined) > 0 else 0
+            print(f"Portfolio return (equal-weighted): {portfolio_return*100:.2f}%")
+        print("-" * 50)
         
         # Obtain average daily return of portfolio
         ret = pd.concat([ret, combined.div(combined.shift(1)).fillna(combined.iloc[0])], axis=0)
@@ -314,4 +334,17 @@ top_n_industry = (ret_sector.loc[ret_sector.groupby('sector')['return'].transfor
                   .iloc[:3]
                   .set_index('index'))
 top_n = top_n_industry
-print(top_n, industry_indexed.loc[top_n.index, :])
+
+# Print prediction details
+lookback_start = rolling_ret.iloc[i].name - pd.DateOffset(months=x-1)
+lookback_end = rolling_ret.iloc[i].name
+next_month = rolling_ret.iloc[i + 1].name + pd.offsets.MonthBegin(-1)
+
+print(f"\n=== PREDICTION for {next_month.strftime('%Y-%m')} ===")
+print(f"Lookback period: {lookback_start.strftime('%Y-%m')} to {lookback_end.strftime('%Y-%m')}")
+print(f"Selected stocks (past 3-month return, sector):")
+for ticker in top_n.index:
+    past_return = rolling_ret_row[ticker]
+    sector = industry_indexed.loc[ticker, 'sector'] if ticker in industry_indexed.index else 'N/A'
+    print(f"  {ticker}: {past_return*100:.2f}% ({sector})")
+print("-" * 50)
