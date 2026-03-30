@@ -1,0 +1,8 @@
+pandas
+numpy
+yahooquery
+yfinance
+wikipedia
+python-dotenv
+webull
+requests
