@@ -153,14 +153,14 @@ l = 1.07  # Limit/take profit threshold for the stock
 # To exclude multiple different sectors
 
 # Calculate daily returns from adjusted close prices
-daily_ret = daily['Adj Close'].pct_change()
+daily_ret = daily['Adj Close'].pct_change(fill_method=None)
 daily_ret.index=pd.to_datetime(daily_ret.index)+ pd.DateOffset(days=d)
 
 # Calculate monthly returns by compounding daily returns within each month
-monthly_ret = (daily_ret+1).groupby(pd.Grouper(freq="M")).prod()
+monthly_ret = (daily_ret+1).groupby(pd.Grouper(freq="ME")).prod()
 
 # Calculate cumulative returns from start of each month
-ret_calc = (daily_ret+1).groupby(pd.Grouper(freq="M")).cumprod()
+ret_calc = (daily_ret+1).groupby(pd.Grouper(freq="ME")).cumprod()
 
 # Generate rolling returns for x months and drop the first x-1 months
 rolling_ret = monthly_ret.rolling(x, min_periods=x).agg(lambda x: x.prod()).dropna(axis=0)
@@ -296,7 +296,8 @@ for i in range(len(monthly_ret) - x):
         
         for ticker in top_n.index:
             past_return = rolling_ret_row[ticker]
-            sector = industry_indexed.loc[ticker, 'sector'] if ticker in industry_indexed.index else 'N/A'
+            sector_val = industry_indexed.loc[ticker, 'sector'] if ticker in industry_indexed.index else 'N/A'
+            sector = sector_val.values[0] if hasattr(sector_val, 'values') else sector_val
             print(f"  {ticker}: {past_return*100:.2f}% ({sector})")
         
         # Get current month cumulative returns
@@ -310,7 +311,9 @@ for i in range(len(monthly_ret) - x):
         print("-" * 50)
         
         # Obtain average daily return of portfolio
-        ret = pd.concat([ret, combined.div(combined.shift(1)).fillna(combined.iloc[0])], axis=0)
+        combined_ret = combined.div(combined.shift(1)).fillna(combined.iloc[0])
+        if not combined_ret.empty:
+            ret = pd.concat([ret, combined_ret], axis=0)
 
 # Set timezone for return index
 ret.index = (ret.index - pd.DateOffset(days=d)).tz_localize('UTC')
@@ -338,13 +341,23 @@ top_n = top_n_industry
 # Print prediction details
 lookback_start = rolling_ret.iloc[i].name - pd.DateOffset(months=x-1)
 lookback_end = rolling_ret.iloc[i].name
-next_month = rolling_ret.iloc[i + 1].name + pd.offsets.MonthBegin(-1)
+
+# Check if next month data is available for prediction
+if i + 1 < len(rolling_ret):
+    next_month = rolling_ret.iloc[i + 1].name + pd.offsets.MonthBegin(-1)
+    has_next_month_data = True
+else:
+    next_month = rolling_ret.iloc[i].name + pd.DateOffset(months=1)
+    has_next_month_data = False
 
 print(f"\n=== PREDICTION for {next_month.strftime('%Y-%m')} ===")
+if not has_next_month_data:
+    print("(Next month data not available - this is a forward prediction)")
 print(f"Lookback period: {lookback_start.strftime('%Y-%m')} to {lookback_end.strftime('%Y-%m')}")
 print(f"Selected stocks (past 3-month return, sector):")
 for ticker in top_n.index:
     past_return = rolling_ret_row[ticker]
-    sector = industry_indexed.loc[ticker, 'sector'] if ticker in industry_indexed.index else 'N/A'
+    sector_val = industry_indexed.loc[ticker, 'sector'] if ticker in industry_indexed.index else 'N/A'
+    sector = sector_val.values[0] if hasattr(sector_val, 'values') else sector_val
     print(f"  {ticker}: {past_return*100:.2f}% ({sector})")
 print("-" * 50)
