@@ -4,5 +4,7 @@ yahooquery
 yfinance
 wikipedia
 python-dotenv
-webull
+webull-python-sdk-core
+webull-python-sdk-trade
 requests
+schedule

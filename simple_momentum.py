@@ -11,6 +11,10 @@ import yahooquery as yq
 # from pathlib import Path
 import wikipedia as wp
 import io
+from dotenv import load_dotenv
+import telegram_notify as tg
+
+load_dotenv()
 
 # Define path for saving results
 # results_path = Path('results', 'decision_trees')
@@ -359,5 +363,12 @@ for ticker in top_n.index:
     past_return = rolling_ret_row[ticker]
     sector_val = industry_indexed.loc[ticker, 'sector'] if ticker in industry_indexed.index else 'N/A'
     sector = sector_val.values[0] if hasattr(sector_val, 'values') else sector_val
+    buy_price = daily['Adj Close'][ticker].iloc[-1]
+    sell_price = buy_price * l
     print(f"  {ticker}: {past_return*100:.2f}% ({sector})")
+    print(f"    Buy @ ${buy_price:.2f} | Limit Sell @ ${sell_price:.2f}")
 print("-" * 50)
+
+# Send prediction to Telegram
+month_str = next_month.strftime('%B %Y')
+tg.send_stock_prediction(top_n, rolling_ret_row, industry_indexed, month_str, daily, l)

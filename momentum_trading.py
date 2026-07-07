@@ -1,10 +1,7 @@
 """
-Momentum Trading Strategy with Webull Trading
-==============================================
+Momentum Trading Strategy with Webull Trading (Official SDK)
+=============================================================
 Runs the momentum strategy and executes trades based on predictions.
-
-NOTE: Webull unofficial API only supports PAPER TRADING.
-For real trading, modify to use a broker with real trading support.
 """
 
 import os
@@ -21,8 +18,6 @@ import wikipedia as wp
 import io
 from dotenv import load_dotenv
 
-from webull import webull
-
 load_dotenv()
 
 pd.core.common.is_list_like = pd.api.types.is_list_like
@@ -34,29 +29,42 @@ WEBULL_DEVICE_ID = os.getenv("WEBULL_DEVICE_ID")
 
 
 class MomentumTrader:
-    def __init__(self, dry_run=True):
+    def __init__(self, dry_run=True, paper=True):
         """
         Initialize the momentum trader.
         
         Args:
             dry_run: If True, only simulate trades without executing
+            paper: If True, use paper trading. If False, use live trading.
         """
         self.dry_run = dry_run
-        self.wb = None
+        self.paper = paper
+        self.trader = None
         
         if not dry_run:
             self._init_webull()
     
     def _init_webull(self):
         """Initialize Webull connection."""
-        self.wb = webull()
-        self.wb.login(WEBULL_EMAIL, WEBULL_PASSWORD, WEBULL_DEVICE_ID)
+        from webull import webull
+        from webull.trade import webull_trade
+        
+        wb = webull()
+        if self.paper:
+            self.trader = webull_trade(wb, paper_account=True)
+            print("Connected to Webull Paper Trading")
+        else:
+            self.trader = webull_trade(wb, paper_account=False)
+            print("Connected to Webull Live Trading")
+        
+        wb.login(WEBULL_EMAIL, WEBULL_PASSWORD, WEBULL_DEVICE_ID)
+        self.trader.get_account_id()
         print("Logged in to Webull")
     
     def get_account_info(self):
         """Get account information."""
-        if self.wb:
-            account = self.wb.get_account()
+        if self.trader:
+            account = self.trader.get_account()
             return {
                 'cash': float(account.get('cashBalance', 0)),
                 'buying_power': float(account.get('buyingPower', 0))
@@ -65,15 +73,18 @@ class MomentumTrader:
     
     def get_current_positions(self):
         """Get current stock positions."""
-        if self.wb:
-            positions = self.wb.get_positions()
+        if self.trader:
+            positions = self.trader.get_positions()
             return {p.get('symbol'): int(p.get('quantity', 0)) for p in positions}
         return {}
     
     def get_stock_price(self, ticker):
         """Get current stock price from Webull."""
-        if self.wb:
-            quote = self.wb.get_quote(ticker)
+        if self.trader:
+            from webull import webull
+            wb = webull()
+            wb.login(WEBULL_EMAIL, WEBULL_PASSWORD, WEBULL_DEVICE_ID)
+            quote = wb.get_quote(ticker)
             return float(quote.get('close', 0))
         return None
     
@@ -83,7 +94,7 @@ class MomentumTrader:
             print(f"[DRY RUN] BUY {quantity} shares of {ticker}")
             return {"orderId": "dry_run"}
         
-        order = self.wb.place_order(
+        order = self.trader.place_order(
             stock=ticker,
             action="BUY",
             orderType="MKT",
@@ -99,7 +110,7 @@ class MomentumTrader:
             print(f"[DRY RUN] SELL {quantity} shares of {ticker}")
             return {"orderId": "dry_run"}
         
-        order = self.wb.place_order(
+        order = self.trader.place_order(
             stock=ticker,
             action="SELL",
             orderType="MKT",
@@ -256,12 +267,16 @@ def execute_trades(predicted_stocks, trader, portfolio_value=10000):
 def main():
     """Main function to run strategy and execute trades."""
     
-    DRY_RUN = True
+    DRY_RUN = True  # Set to False to execute real trades
+    PAPER = True    # Set to False for live trading
     
     print("=" * 50)
     print("MOMENTUM TRADING STRATEGY")
     print("=" * 50)
-    print(f"Mode: {'DRY RUN (no actual trades)' if DRY_RUN else 'LIVE TRADING'}")
+    mode = "DRY RUN"
+    if not DRY_RUN:
+        mode = "LIVE " + ("PAPER" if PAPER else "REAL") + " TRADING"
+    print(f"Mode: {mode}")
     print("=" * 50)
     
     print("\n[1] Running momentum strategy...")
@@ -274,7 +289,7 @@ def main():
         print(f"  {ticker}: {past_return*100:.2f}% ({sector})")
     
     print("\n[3] Initializing trader...")
-    trader = MomentumTrader(dry_run=DRY_RUN)
+    trader = MomentumTrader(dry_run=DRY_RUN, paper=PAPER)
     
     if not DRY_RUN:
         account = trader.get_account_info()
