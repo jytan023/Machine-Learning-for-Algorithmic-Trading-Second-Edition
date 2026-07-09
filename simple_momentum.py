@@ -16,6 +16,9 @@ import telegram_notify as tg
 
 load_dotenv()
 
+# Excel file path - override with env var or use local path
+INDUSTRY_FILE = os.getenv("INDUSTRY_FILE", "G:/My Drive/Colab Notebooks/Quant/industry.xlsx")
+
 # Define path for saving results
 # results_path = Path('results', 'decision_trees')
 # if not results_path.exists():
@@ -101,38 +104,49 @@ daily = pivot_df.set_index('Date')
 
 
 
-# dict1 = pd.read_excel("/content/drive/MyDrive/Colab Notebooks/Quant/industry.xlsx", sheet_name = ['SP500'])
 # Load industry/sector information from Excel file
-dict1 = pd.read_excel("G:/My Drive/Colab Notebooks/Quant/industry.xlsx", sheet_name = ['STI','SP500','SP500_rating'])
+try:
+    dict1 = pd.read_excel(INDUSTRY_FILE, sheet_name=['STI', 'SP500', 'SP500_rating'])
+    has_industry_file = True
+except FileNotFoundError:
+    print(f"Warning: Industry file not found at {INDUSTRY_FILE}")
+    print("Sectors will be marked as 'N/A'")
+    dict1 = None
+    has_industry_file = False
 
-# Optimize sector lookup using set for faster membership testing
-sp500_tickers_set = set(dict1['SP500']['tickers'].to_list())
-tickers_missing = [t for t in tickers if t not in sp500_tickers_set]
-
-sector = []
-drop_list = list(sp500_tickers_set)
-
-# Batch fetch sector info for missing tickers (much faster than individual calls)
-if tickers_missing:
-    tickers_sector = yq.Ticker(tickers_missing, asynchronous=True)
-    profiles = tickers_sector.asset_profile
+# Create industry mapping with or without industry file
+if has_industry_file:
+    sp500_tickers_set = set(dict1['SP500']['tickers'].to_list())
+    tickers_missing = [t for t in tickers if t not in sp500_tickers_set]
     
-    for ticker in tickers_missing:
-        try:
-            sector_value = profiles[ticker]['sector']
-            print(ticker, sector_value)
-            sector.append(sector_value)
-        except:
-            print(ticker)
-            drop_list.append(ticker)
-
-# Create a set for faster lookup and filter tickers
-drop_set = set(drop_list)
-tickers = [tick for tick in tickers if tick not in drop_set]
-
-# Combine manually fetched sector data with industry file data
-# industry = pd.DataFrame({'tickers':tickers,'sector': sector})
-industry = pd.concat([pd.DataFrame({'tickers':tickers,'sector': sector}),dict1['SP500']], axis = 0)
+    sector = []
+    drop_list = list(sp500_tickers_set)
+    
+    # Batch fetch sector info for missing tickers (much faster than individual calls)
+    if tickers_missing:
+        tickers_sector = yq.Ticker(tickers_missing, asynchronous=True)
+        profiles = tickers_sector.asset_profile
+        
+        for ticker in tickers_missing:
+            try:
+                sector_value = profiles[ticker]['sector']
+                print(ticker, sector_value)
+                sector.append(sector_value)
+            except:
+                print(ticker)
+                drop_list.append(ticker)
+    
+    # Create a set for faster lookup and filter tickers
+    drop_set = set(drop_list)
+    tickers = [tick for tick in tickers if tick not in drop_set]
+    
+    # Combine manually fetched sector data with industry file data
+    industry = pd.concat([pd.DataFrame({'tickers':tickers,'sector': sector}),dict1['SP500']], axis = 0)
+else:
+    # No industry file - create empty industry DataFrame
+    sp500_tickers_set = set()
+    sector = ['N/A'] * len(tickers)
+    industry = pd.DataFrame({'tickers': tickers, 'sector': 'N/A'})
 
 # Optimize: Combine melt operations more efficiently
 # melted_dfs = []

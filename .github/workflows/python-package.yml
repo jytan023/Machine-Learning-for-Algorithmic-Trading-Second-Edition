@@ -5,12 +5,6 @@ on:
     - cron: "0 20 1 * *" # Runs on the 1st of every month at 8:00 PM UTC
   workflow_dispatch:
 
-env:
-  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  # GCP_SECRET: ${{secrets.GCP_SECRET}}
-  # SHEET_ID: ${{secrets.SHEET_ID}}
-
 jobs:
   scrape-latest:
     runs-on: ubuntu-latest
@@ -22,13 +16,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      # - name: Set up Google Cloud SDK
-      #   uses: actions/setup-gcloud@v1
-      #   with:
-      #     service_account_key: ${{ secrets.GCP_SECRET }}
-      #     export_default_credentials: true
       - name: Install requirements
         run: pip install -r requirements.txt
-      # - name: Echo in gcp json
       - name: Run Top 3 Momentum Stocks
         run: python simple_momentum.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
